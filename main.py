@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, Res
 from fastapi.middleware.cors import CORSMiddleware
 import nacl.secret
 from curl_cffi import requests as curl_requests
+from serverless_http import serverless
 
 # --- Configuration ---
 ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY", "default-key-change-me-in-vercel-settings")
@@ -138,5 +139,6 @@ async def proxy_stream(request: Request):
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Proxy Error: {str(e)}")
 
-# Vercel Handler
-handler = app
+# --- Vercel Entry Point ---
+# Wrap the FastAPI app for Vercel's serverless environment
+handler = serverless(app)
