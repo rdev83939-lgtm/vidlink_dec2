@@ -1,5 +1,5 @@
 fastapi
-uvicorn[standard]
-httpx
+uvicorn
+requests
 pynacl
 curl-cffi
