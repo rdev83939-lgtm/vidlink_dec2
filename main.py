@@ -139,6 +139,7 @@ async def proxy_stream(request: Request):
         raise HTTPException(status_code=502, detail=f"Proxy Error: {str(e)}")
 
 # --- Vercel Entry Point ---
-# This is the critical part. Vercel looks for 'app' or 'handler' at the module level.
-# By naming it 'app', Vercel's Python runtime will automatically detect it.
+# Vercel's Python runtime looks for a function named 'handler' or 'app'
+# If neither works, we can try exposing the ASGI app directly.
+# But usually, 'handler' is the standard.
 handler = app
