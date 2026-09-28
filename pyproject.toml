@@ -1,2 +1,2 @@
-[tool.uv]
-virtual = true
+[tool.vercel]
+entrypoint = "backend.server:app"
