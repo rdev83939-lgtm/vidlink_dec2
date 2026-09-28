@@ -1,2 +1,2 @@
-[tool.vercel]
-entrypoint = "main2:app"
+[tool.uv]
+virtual = true
