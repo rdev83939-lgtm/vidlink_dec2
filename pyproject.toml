@@ -1,2 +1,2 @@
-[tool.fastapi]
+[tool.vercel]
 entrypoint = "main2:app"
