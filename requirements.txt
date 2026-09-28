@@ -3,3 +3,4 @@ uvicorn
 requests
 pynacl
 curl-cffi
+serverless-http
