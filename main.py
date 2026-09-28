@@ -12,25 +12,21 @@ import nacl.secret
 from curl_cffi import requests as curl_requests
 
 # --- Configuration ---
-# Use environment variables in Vercel for these
 ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY", "default-key-change-me-in-vercel-settings")
-BASE_URL = os.getenv("BASE_URL", "https://vidlink.pro") # Example base, change as needed
+BASE_URL = os.getenv("BASE_URL", "https://vidlink.pro")
 
 # --- Crypto Helpers ---
 def encrypt_token(token: str) -> str:
     try:
         key_bytes = base64.b64decode(ENCRYPTION_KEY)
         if len(key_bytes) != 32:
-            # Simple padding or error handling if key is wrong length
             key_bytes = (key_bytes * 2)[:32]
-        
         nonce = nacl.secret.SecretBox(key_bytes).generate_nonce()
         box = nacl.secret.SecretBox(key_bytes)
         encrypted = box.encrypt(token.encode('utf-8'), nonce)
         encrypted_with_nonce = nonce + encrypted
         return base64.b64encode(encrypted_with_nonce).decode('utf-8')
     except Exception:
-        # Fallback for debugging if key is invalid
         return base64.b64encode(token.encode()).decode()
 
 def decrypt_token(token: str) -> str:
@@ -38,7 +34,6 @@ def decrypt_token(token: str) -> str:
         key_bytes = base64.b64decode(ENCRYPTION_KEY)
         if len(key_bytes) != 32:
             key_bytes = (key_bytes * 2)[:32]
-            
         decoded = base64.b64decode(token)
         nonce = decoded[:24]
         box = nacl.secret.SecretBox(key_bytes)
@@ -62,17 +57,12 @@ app.add_middleware(
 )
 
 def fetch_with_retry(url, headers=None, retries=3, delay=2):
-    """Helper to fetch URL with retry logic using curl_cffi"""
     if headers is None:
         headers = {}
-    
-    # Add standard headers if not present
     if "User-Agent" not in headers:
         headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    
     for i in range(retries):
         try:
-            # Use curl_cffi for better anti-bot support
             resp = curl_requests.get(url, headers=headers, impersonate="chrome120", timeout=30)
             return resp
         except Exception as e:
@@ -88,7 +78,7 @@ async def index():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>VidLink Pro</title>
+        <title>VidLink Pro API</title>
         <style>
             body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #111; color: white; }
             .container { text-align: center; }
@@ -125,32 +115,21 @@ async def decrypt_endpoint(token: str):
 
 @app.get("/proxy")
 async def proxy_stream(request: Request):
-    """
-    Proxies video/stream requests.
-    Note: This is synchronous. For long streams, Vercel's 60s timeout might kill it 
-    unless you use the "Edge" runtime or a dedicated VM (Fly.io).
-    """
     token = request.query_params.get("token")
     if not token:
         raise HTTPException(status_code=400, detail="Missing token")
     
     try:
         decrypted_token = decrypt_token(token)
-        # Assume the token contains the full URL or path. 
-        # If your token is just an ID, you need to map it here.
-        # For this generic proxy, we assume the decrypted token IS the target URL.
         target_url = decrypted_token
         
-        # Forward headers from the original request
         forwarded_headers = {}
         for key, value in request.headers.items():
             if key.lower() not in ["host", "transfer-encoding", "connection", "keep-alive"]:
                 forwarded_headers[key] = value
         
-        # Fetch the stream
         resp = fetch_with_retry(target_url, headers=forwarded_headers)
         
-        # Return streaming response
         return StreamingResponse(
             iter([chunk for chunk in resp.iter_bytes(chunk_size=8192)]),
             status_code=resp.status_code,
